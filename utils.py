@@ -101,7 +101,3 @@ def create_noisy_image(filename='tiger.jpg'):
     io.imsave(result_file, img.astype(np.uint8))
 
     return True
-
-
-if __name__ == "__main__":
-    create_noisy_image("Test.jpg")
