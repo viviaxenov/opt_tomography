@@ -7,27 +7,28 @@ from skimage.color import rgb2gray
 
 def generate_stochastic_matrix(
         area: np.ndarray,
-        sources_x: int,
-        sources_y: int
+        detectors_x: int,
+        detectors_y: int
     ):
     """
     :param area: basis for stoch.matrix
-    :param sources_y: the amount of sources along fixed x axis
-    :param sources_x: the amount of sources along fixed y axis
-    :return: np.ndarray of size (area.shape[0] * area.shape[1], sources_x * sources_y)
-    Generates a column-stochastic matrix (see https://en.wikipedia.org/wiki/Stochastic_matrix)
+    :param detectors_y: the amount of detectors along fixed x axis
+    :param detectors_x: the amount of detectors along fixed y axis
+    :return: np.ndarray of size (area.shape[0] * area.shape[1], detectors_x * detectors_y)
+    Generates a row-stochastic matrix (see https://en.wikipedia.org/wiki/Stochastic_matrix)
     based on 2d numpy array specified in area.
-    It is considered that area is lit with sources_x * sources_y emitters
-    placed equidistantly over the area, radiating with 2d normal
+    It is considered that area is covered with detectors_x * detectors_y detectors
+    placed equidistantly over the array, having a chance to detect a particle within area
+    corresponding to 2d normal
     distribution with dispersion comparable with distance between them
 
-    A element of matrix indexed (i, j) stands for the probability for emitter j to radiate
-    into the ith cell of the area
+    A element of matrix indexed (i, j) stands for the probability for detector i to catch
+    a particle received by the j-th cell of the area
     """
 
-    sources = sources_x * sources_y
-    h_x = 1.0 / (sources_y - 1)
-    h_y = 1.0 / (sources_x - 1)
+    sources = detectors_x * detectors_y
+    h_x = 1.0 / (detectors_y - 1)
+    h_y = 1.0 / (detectors_x - 1)
     # optional, may be changed
     dispersion_multiplier = 5.0  # square root of dispersion of sources / distance between sources
     sigma_x = dispersion_multiplier * h_x
@@ -48,8 +49,8 @@ def generate_stochastic_matrix(
 
     stochastic_matrix = np.array([])
 
-    for i in range(sources_y):
-        for j in range(sources_x):
+    for i in range(detectors_y):
+        for j in range(detectors_x):
 
             source_prob_matrix = np.zeros(area.shape)
             for l in range(area.shape[1]):
@@ -65,10 +66,7 @@ def generate_stochastic_matrix(
                 axis=None
             )
 
-    return stochastic_matrix.reshape(
-        sources,
-        area.shape[0] * area.shape[1],
-    ).transpose()
+    return stochastic_matrix.reshape(sources, area.shape[0] * area.shape[1])
 
 
 def create_noisy_image(filename='tiger.jpg'):
@@ -80,6 +78,7 @@ def create_noisy_image(filename='tiger.jpg'):
     extension. Returns True if the image creation was successful, False otherwise
     """
 
+    img = None
     filename = os.path.join(os.getcwd(), filename)
     try:
         img = rgb2gray(img_as_ubyte(io.imread(filename))) * 255
@@ -87,16 +86,11 @@ def create_noisy_image(filename='tiger.jpg'):
         print(err.args)
         return False
 
-    stochastic_matrix = generate_stochastic_matrix(img, 30, 30)
-
     # It is unknown how to convert random samples into scale of white color intensity
-    # optional, may (or even must) be changed
-    intensity_multiplier = 1.0
+    # optional, may be changed
+    _lambda = 100.0
 
-    noise = (stochastic_matrix @ np.random.poisson(10000, stochastic_matrix.shape[1])).reshape(
-        img.shape[0],
-        img.shape[1],
-    ) * intensity_multiplier
+    noise = np.random.poisson(_lambda, img.shape)
 
     img = np.array([i if i <= 255 else 255 for i in np.nditer(img + noise)]).reshape(
         img.shape[0],
