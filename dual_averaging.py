@@ -20,6 +20,7 @@ class DualAveragingMethod:
         self.g = sg(x_0)
         self.x = x_0
         self.sum = x_0
+        self.x_avg = x_0
         self.bounds = bounds
         self.delta = np.inf
         self.iterations = 0
@@ -35,7 +36,7 @@ class DualAveragingMethod:
         else:
             raise ValueError('Unknown mirror map type. Can only be \'Rn\' or \'R++\'')
 
-        self.step_function = lambda x: self.eta*np.dot(self.g, self.x) + self.F(x)
+        self.step_function = lambda x: self.eta*np.dot(self.g, x) + self.F(x)
 
     def iteration(self):
         res: scipy.optimize.OptimizeResult = scipy.optimize.minimize(self.step_function, self.x, jac=self.jac,
@@ -46,6 +47,7 @@ class DualAveragingMethod:
         self.delta = np.linalg.norm(res.x - self.x, ord=2)
         self.x = res.x
         self.sum += res.x
+        self.x_avg = self.sum/self.iterations
         self.g += self.sg(self.x)
 
 
