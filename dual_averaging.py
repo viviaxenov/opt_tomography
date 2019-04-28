@@ -19,21 +19,35 @@ class DualAveragingMethod:
         self.eta = eta
         self.g = sg(x_0)
         self.x = x_0
+        self.sum = x_0
         self.bounds = bounds
+        self.delta = np.inf
         self.iterations = 0
         self.F = []
+        self.jac = []
 
         if mirror_map == 'Rn':
             self.F = lambda x: 0.5*np.dot(x, x)
+            self.jac = lambda x: self.eta*self.g + x
         elif mirror_map == 'R++':
             self.F = lambda x: -scipy.stats.entropy(x)
+            self.jac = lambda x: self.eta*self.g + np.log(x) + 1.
         else:
             raise ValueError('Unknown mirror map type. Can only be \'Rn\' or \'R++\'')
 
         self.step_function = lambda x: self.eta*np.dot(self.g, self.x) + self.F(x)
 
     def iteration(self):
-        
+        res: scipy.optimize.OptimizeResult = scipy.optimize.minimize(self.step_function, self.x, jac=self.jac,
+                                                                     bounds=self.bounds, method='L-BFGS-B')
+        self.iterations += 1
+        if not res.success:
+            raise RuntimeError(f'Failed to make iteration {self.iterations}. Cause of termination: {res.message}')
+        self.delta = np.linalg.norm(res.x - self.x, ord=2)
+        self.x = res.x
+        self.sum += res.x
+        self.g += self.sg(self.x)
+
 
 
 
