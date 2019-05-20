@@ -29,7 +29,7 @@ class DualAveragingRPP:
 
 
     def iteration(self):
-        x_new = np.exp(-self.eta*self.g - np.log(self.x) - 1.)
+        x_new = np.exp(-self.eta*self.g - 1.)
         self.iterations += 1
 
         if self.f(x_new) < self.f(self.x_min):
